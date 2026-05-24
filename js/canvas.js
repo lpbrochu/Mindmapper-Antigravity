@@ -67,6 +67,8 @@ export class MindMapCanvas {
                 this.panY = e.clientY - this.panStartY;
                 this.updateTransform();
             } else if (this.dragNodeID) {
+                this.currentMouseX = e.clientX;
+                this.currentMouseY = e.clientY;
                 this.handleNodeDrag(e);
             }
         });
@@ -189,8 +191,11 @@ export class MindMapCanvas {
         this.dragNodeID = nodeID;
         this.dragStartMouseX = e.clientX;
         this.dragStartMouseY = e.clientY;
+        this.currentMouseX = e.clientX;
+        this.currentMouseY = e.clientY;
         this.dragStartPositions = this.store.branchPositions(nodeID);
         this.isDraggingNode = false; // set to true only after exceeding threshold
+        this.edgeScrollLoopActive = false;
         
         this.store.selectedNodeID = nodeID;
         this.store.notify();
@@ -207,6 +212,12 @@ export class MindMapCanvas {
         if (!this.isDraggingNode) {
             if (distance > 4) {
                 this.isDraggingNode = true;
+                
+                // Start dynamic boundary edge scrolling loop
+                if (!this.edgeScrollLoopActive) {
+                    this.edgeScrollLoopActive = true;
+                    this.startEdgeScrollLoop();
+                }
             } else {
                 return; // ignore minor click wiggles
             }
@@ -226,6 +237,53 @@ export class MindMapCanvas {
         this.isDraggingNode = false;
         this.dragNodeID = null;
         this.dragStartPositions = null;
+        this.edgeScrollLoopActive = false;
+    }
+
+    startEdgeScrollLoop() {
+        if (!this.isDraggingNode || !this.dragNodeID) {
+            this.edgeScrollLoopActive = false;
+            return;
+        }
+
+        const rect = this.viewport.getBoundingClientRect();
+        const edgeMargin = 55; // 55px boundary scroll trigger zone
+        const scrollSpeed = 8; // speed of auto-scroll in pixels per frame
+
+        let dx = 0;
+        let dy = 0;
+
+        // Check horizontal edges
+        if (this.currentMouseX < rect.left + edgeMargin) {
+            dx = scrollSpeed; // pan right (moves canvas right, scrolling viewport left)
+        } else if (this.currentMouseX > rect.right - edgeMargin) {
+            dx = -scrollSpeed; // pan left (moves canvas left, scrolling viewport right)
+        }
+
+        // Check vertical edges
+        if (this.currentMouseY < rect.top + edgeMargin) {
+            dy = scrollSpeed; // pan down (moves canvas down, scrolling viewport up)
+        } else if (this.currentMouseY > rect.bottom - edgeMargin) {
+            dy = -scrollSpeed; // pan up (moves canvas up, scrolling viewport down)
+        }
+
+        if (dx !== 0 || dy !== 0) {
+            this.panX += dx;
+            this.panY += dy;
+            this.updateTransform();
+
+            // Shift mouse start tracking to match panning translation perfectly
+            this.dragStartMouseX -= dx;
+            this.dragStartMouseY -= dy;
+
+            // Sync node positioning coordinates
+            this.handleNodeDrag({
+                clientX: this.currentMouseX,
+                clientY: this.currentMouseY
+            });
+        }
+
+        requestAnimationFrame(() => this.startEdgeScrollLoop());
     }
 
     // --- Inline Title Editing (Double Click) ---
