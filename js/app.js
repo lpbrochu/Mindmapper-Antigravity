@@ -98,6 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- File Serialization Handling (Save / Load / Import / Export) ---
     
     // File triggers
+    const btnNewJSON = document.getElementById('btn-new-json');
+    if (btnNewJSON) {
+        btnNewJSON.addEventListener('click', () => {
+            if (confirm("Are you sure you want to create a new mind map? All unsaved changes will be lost.")) {
+                store.newDocument();
+            }
+        });
+    }
+
     const btnLoadJSON = document.getElementById('btn-load-json');
     const jsonFileInput = document.getElementById('json-file-input');
     if (btnLoadJSON && jsonFileInput) {
