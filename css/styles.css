@@ -45,7 +45,7 @@
 
 body, html {
     width: 100%;
-    height: 100%;
+    height: 100dvh; /* Resilient to iOS virtual keyboard overlay slide-ups */
     overflow: hidden;
     background-color: var(--bg-app);
     color: var(--text-primary);
@@ -75,7 +75,7 @@ body, html {
     display: flex;
     flex-direction: column;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh; /* Dynamic sizing keeps layout intact when keyboard opens */
     overflow: hidden;
     position: relative;
 }
@@ -112,7 +112,8 @@ button.btn-tool {
     background: transparent;
     border: 1px solid transparent;
     color: var(--text-primary);
-    padding: 6px 10px;
+    padding: 6px 12px;
+    min-height: 44px; /* WCAG 2.2 touch-hit target compliance */
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -122,16 +123,19 @@ button.btn-tool {
     font-family: var(--font-body);
     font-size: 13px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease, transform 0.05s ease;
 }
 
-button.btn-tool:hover:not(:disabled) {
-    background: var(--bg-sidebar-hover);
-    border-color: var(--border-ui);
+@media (hover: hover) {
+    button.btn-tool:hover:not(:disabled) {
+        background: var(--bg-sidebar-hover);
+        border-color: var(--border-ui);
+    }
 }
 
 button.btn-tool:active:not(:disabled) {
     background: var(--bg-sidebar-active);
+    transform: scale(0.96); /* Touch feedback micro-animation */
 }
 
 button.btn-tool:disabled {
@@ -170,7 +174,7 @@ button.btn-tool svg {
     display: flex;
     position: relative;
     overflow: hidden;
-    height: calc(100vh - var(--toolbar-height));
+    height: calc(100dvh - var(--toolbar-height));
 }
 
 /* Sidebars Base */
@@ -256,17 +260,23 @@ button.btn-tool svg {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 14px 16px; /* Expanded padding yields hit target height > 48px */
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
-.node-item:hover {
-    background: var(--bg-sidebar-hover);
+@media (hover: hover) {
+    .node-item:hover {
+        background: var(--bg-sidebar-hover);
+    }
 }
 
 .node-item.selected {
     background: var(--bg-sidebar-active);
+}
+
+.node-item:active {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .node-color-bullet {
@@ -399,7 +409,8 @@ textarea.inspector-input {
 }
 
 .color-picker-circle {
-    aspect-ratio: 1;
+    width: 28px; /* Standardize interactive diameter */
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
@@ -410,14 +421,32 @@ textarea.inspector-input {
     justify-content: center;
 }
 
-.color-picker-circle:hover {
-    transform: scale(1.15);
+/* Pseudo hit target extending to 44px without enlarging the grid circle visually */
+.color-picker-circle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+}
+
+@media (hover: hover) {
+    .color-picker-circle:hover {
+        transform: scale(1.15);
+    }
 }
 
 .color-picker-circle.active {
     border-color: #ffffff;
     box-shadow: 0 0 10px currentColor;
     transform: scale(1.1);
+}
+
+.color-picker-circle:active {
+    transform: scale(0.9);
 }
 
 /* Position coordinate inputs */
@@ -482,6 +511,8 @@ textarea.inspector-input {
     position: relative;
     background-color: var(--bg-app);
     cursor: grab;
+    touch-action: none; /* Prevents browser intercepting dragging and pinches */
+    -webkit-user-select: none;
 }
 
 .canvas-viewport:active {
@@ -560,20 +591,26 @@ textarea.inspector-input {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
     cursor: default;
     pointer-events: auto;
-    transition: transform 0.1s ease, border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    touch-action: none; /* Captures absolute dragging without browser scrolls interfering */
+    -webkit-user-select: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
 }
 
-.node-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+@media (hover: hover) {
+    .node-card:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
 }
 
 .node-card.selected {
     background: var(--bg-card-selected);
     border-color: var(--node-accent-color);
     box-shadow: 0 0 20px var(--node-accent-glow), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.node-card:active:not(.editing) {
+    transform: translate(-50%, -50%) scale(0.98); /* tactile tap feedback */
 }
 
 /* Active drop target preview glow */
@@ -684,19 +721,28 @@ textarea.inspector-input {
     cursor: pointer;
     display: flex;
     align-items: center;
-    padding: 2px;
-    border-radius: 4px;
-    transition: all 0.15s ease;
+    justify-content: center;
+    width: 44px; /* Standardize HUD zoom hit target to 44px */
+    height: 44px;
+    border-radius: 6px;
+    transition: all 0.15s ease, transform 0.05s ease;
 }
 
-.canvas-hud button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+@media (hover: hover) {
+    .canvas-hud button:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+}
+
+.canvas-hud button:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.9);
 }
 
 .canvas-hud button svg {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     stroke: currentColor;
     stroke-width: 2px;
     fill: none;

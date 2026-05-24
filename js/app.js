@@ -87,6 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
             store.document.title = e.target.value.trim() === '' ? 'Untitled Mind Map' : e.target.value;
             store.markChanged(); // Silent backup update
         });
+        // Scroll-into-view helper on mobile virtual keyboard focus
+        inputDocTitle.addEventListener('focus', (e) => {
+            setTimeout(() => {
+                e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }, 300);
+        });
     }
 
     // --- File Serialization Handling (Save / Load / Import / Export) ---
@@ -334,6 +340,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const inspectNotes = document.getElementById('inspect-notes');
         const inspectX = document.getElementById('inspect-x');
         const inspectY = document.getElementById('inspect-y');
+
+        // Scroll input fields into view when iOS virtual keyboard opens
+        const handleInputFocus = (e) => {
+            setTimeout(() => {
+                e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }, 300);
+        };
+
+        inspectTitle.addEventListener('focus', handleInputFocus);
+        inspectNotes.addEventListener('focus', handleInputFocus);
+        inspectX.addEventListener('focus', handleInputFocus);
+        inspectY.addEventListener('focus', handleInputFocus);
 
         inspectTitle.addEventListener('input', (e) => {
             const activeNode = store.selectedNode;

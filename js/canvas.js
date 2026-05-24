@@ -45,14 +45,22 @@ export class MindMapCanvas {
     // --- Panning & Zooming Interaction ---
 
     initViewportEvents() {
-        // Viewport Drag-Panning
-        this.viewport.addEventListener('mousedown', (e) => {
+        // Viewport Drag-Panning (Universal Pointer Events)
+        this.viewport.addEventListener('pointerdown', (e) => {
+            // Ignore panning on touch if we are actually tapping an interactive card
+            if (e.pointerType === 'touch' && e.target !== this.viewport && e.target !== this.content && e.target.tagName !== 'svg' && e.target.tagName !== 'path') {
+                return;
+            }
             // Only pan if clicking direct background or grid, not nodes
             if (e.target === this.viewport || e.target === this.content || e.target.tagName === 'svg' || e.target.tagName === 'path') {
                 this.isPanning = true;
                 this.panStartX = e.clientX - this.panX;
                 this.panStartY = e.clientY - this.panY;
                 this.viewport.style.cursor = 'grabbing';
+                
+                try {
+                    this.viewport.setPointerCapture(e.pointerId);
+                } catch (err) {}
                 
                 // Unfocus any active inline edit
                 if (this.editingNodeID) {
@@ -61,7 +69,7 @@ export class MindMapCanvas {
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
+        window.addEventListener('pointermove', (e) => {
             if (this.isPanning) {
                 this.panX = e.clientX - this.panStartX;
                 this.panY = e.clientY - this.panStartY;
@@ -73,15 +81,21 @@ export class MindMapCanvas {
             }
         });
 
-        window.addEventListener('mouseup', () => {
+        const endPanningOrDragging = (e) => {
             if (this.isPanning) {
                 this.isPanning = false;
                 this.viewport.style.cursor = 'grab';
+                try {
+                    this.viewport.releasePointerCapture(e.pointerId);
+                } catch (err) {}
             }
             if (this.dragNodeID) {
                 this.endNodeDrag();
             }
-        });
+        };
+
+        window.addEventListener('pointerup', endPanningOrDragging);
+        window.addEventListener('pointercancel', endPanningOrDragging);
 
         // Wheel Panning & Pinch-to-Zoom
         this.viewport.addEventListener('wheel', (e) => {
@@ -526,12 +540,33 @@ export class MindMapCanvas {
                 card.id = `node-card-${node.id}`;
                 card.dataset.id = node.id;
                 
-                // Mouse Drag event bindings
-                card.addEventListener('mousedown', (e) => {
+                // Track double taps for touch tablet compatibility
+                let lastTapTime = 0;
+                
+                // Universal Pointer Drag event bindings
+                card.addEventListener('pointerdown', (e) => {
                     // Prevent drag on text editing input or selections
                     if (e.target.classList.contains('node-title-input') && card.classList.contains('editing')) {
                         return;
                     }
+                    
+                    // Double-tap/Double-click inline edit manual check (touch friendly)
+                    const now = Date.now();
+                    if (now - lastTapTime < 300) {
+                        e.preventDefault();
+                        const input = card.querySelector('.node-title-input');
+                        if (input) {
+                            this.startInlineEdit(node.id, input);
+                            lastTapTime = 0; // Reset
+                            return;
+                        }
+                    }
+                    lastTapTime = now;
+
+                    try {
+                        card.setPointerCapture(e.pointerId);
+                    } catch (err) {}
+                    
                     this.startNodeDrag(node.id, e);
                 });
                 
@@ -544,7 +579,7 @@ export class MindMapCanvas {
                     }
                 });
 
-                // Double click inline edit
+                // Double click inline edit (mouse fallback)
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
                     const input = card.querySelector('.node-title-input');
