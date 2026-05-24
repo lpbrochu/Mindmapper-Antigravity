@@ -290,6 +290,30 @@ export class MindMapCanvas {
     // --- Rendering Core Loop ---
 
     render() {
+        // 0. Dynamically expand canvas dimensions to encapsulate all active nodes
+        const nodes = this.store.document.nodes;
+        if (nodes.length > 0) {
+            let maxX = -Infinity, maxY = -Infinity;
+            for (const node of nodes) {
+                const size = node.displaySize;
+                const x = node.position.x;
+                const y = node.position.y;
+                maxX = Math.max(maxX, x + size.width / 2);
+                maxY = Math.max(maxY, y + size.height / 2);
+            }
+            
+            // Apply a generous scroll margin so users can pan past edges
+            const margin = 800; 
+            const canvasWidth = Math.max(3200, maxX + margin);
+            const canvasHeight = Math.max(2400, maxY + margin);
+
+            this.content.style.width = `${canvasWidth}px`;
+            this.content.style.height = `${canvasHeight}px`;
+            this.svgLayer.setAttribute('width', canvasWidth);
+            this.svgLayer.setAttribute('height', canvasHeight);
+            this.svgLayer.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+        }
+
         // 1. Update document title
         const docTitleInput = document.getElementById('input-doc-title');
         if (docTitleInput && document.activeElement !== docTitleInput) {
