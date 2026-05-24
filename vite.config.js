@@ -8,7 +8,6 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser', // fallback to standard minification
     rollupOptions: {
       output: {
         manualChunks: undefined // keep the bundle unified and simple
