@@ -1,0 +1,14 @@
+{
+  "name": "mindmapper-antigravity",
+  "version": "1.0.0",
+  "description": "Port of Mindmapper-Codex to a modern JavaScript web application",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.11"
+  }
+}
