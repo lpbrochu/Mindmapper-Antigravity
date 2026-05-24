@@ -66,7 +66,7 @@ export class MindMapCanvas {
                 this.panX = e.clientX - this.panStartX;
                 this.panY = e.clientY - this.panStartY;
                 this.updateTransform();
-            } else if (this.isDraggingNode && this.dragNodeID) {
+            } else if (this.dragNodeID) {
                 this.handleNodeDrag(e);
             }
         });
@@ -76,7 +76,7 @@ export class MindMapCanvas {
                 this.isPanning = false;
                 this.viewport.style.cursor = 'grab';
             }
-            if (this.isDraggingNode) {
+            if (this.dragNodeID) {
                 this.endNodeDrag();
             }
         });
@@ -190,25 +190,38 @@ export class MindMapCanvas {
         this.dragStartMouseX = e.clientX;
         this.dragStartMouseY = e.clientY;
         this.dragStartPositions = this.store.branchPositions(nodeID);
-        this.isDraggingNode = true;
+        this.isDraggingNode = false; // set to true only after exceeding threshold
         
         this.store.selectedNodeID = nodeID;
         this.store.notify();
     }
 
     handleNodeDrag(e) {
-        if (!this.isDraggingNode || !this.dragNodeID) return;
+        if (!this.dragNodeID) return;
 
-        const dx = (e.clientX - this.dragStartMouseX) / this.store.zoomScale;
-        const dy = (e.clientY - this.dragStartMouseY) / this.store.zoomScale;
+        const dxMouse = e.clientX - this.dragStartMouseX;
+        const dyMouse = e.clientY - this.dragStartMouseY;
+        const distance = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+
+        // Only register drag if moved past 4 pixels threshold
+        if (!this.isDraggingNode) {
+            if (distance > 4) {
+                this.isDraggingNode = true;
+            } else {
+                return; // ignore minor click wiggles
+            }
+        }
+
+        const dx = dxMouse / this.store.zoomScale;
+        const dy = dyMouse / this.store.zoomScale;
 
         this.store.moveBranch(this.dragNodeID, this.dragStartPositions, { width: dx, height: dy });
     }
 
     endNodeDrag() {
-        if (!this.isDraggingNode || !this.dragNodeID) return;
-
-        this.store.finishBranchDrag(this.dragNodeID);
+        if (this.isDraggingNode && this.dragNodeID) {
+            this.store.finishBranchDrag(this.dragNodeID);
+        }
         
         this.isDraggingNode = false;
         this.dragNodeID = null;
