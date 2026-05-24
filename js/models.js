@@ -47,7 +47,7 @@ export class MindMapNode {
      * Compute visual size of the node card based on properties
      */
     get displaySize() {
-        const width = this.isRoot ? 220 : 190;
+        const width = this.isRoot ? 280 : 240;
         const height = (!this.notes || this.notes.trim() === '') ? 88 : 132;
         return { width, height };
     }

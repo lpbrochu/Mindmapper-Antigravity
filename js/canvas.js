@@ -302,35 +302,13 @@ export class MindMapCanvas {
 
     // --- Inline Title Editing (Double Click) ---
 
-    startInlineEdit(nodeID, inputElement) {
+    startInlineEdit(nodeID) {
         this.editingNodeID = nodeID;
         const card = document.getElementById(`node-card-${nodeID}`);
         if (card) {
             card.classList.add('editing');
         }
-        
-        inputElement.readOnly = false;
-        inputElement.focus();
-        setTimeout(() => {
-            inputElement.select();
-        }, 50);
-
-        // Save when Enter key is pressed or Blur occurs
-        const keyHandler = (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                inputElement.blur();
-            }
-        };
-
-        const blurHandler = () => {
-            inputElement.removeEventListener('keydown', keyHandler);
-            inputElement.removeEventListener('blur', blurHandler);
-            this.commitInlineEdit(nodeID, inputElement.value);
-        };
-
-        inputElement.addEventListener('keydown', keyHandler);
-        inputElement.addEventListener('blur', blurHandler);
+        this.render();
     }
 
     commitInlineEdit(nodeID = null, newValue = null) {
@@ -340,10 +318,9 @@ export class MindMapCanvas {
         const card = document.getElementById(`node-card-${activeID}`);
         if (card) {
             card.classList.remove('editing');
-            const input = card.querySelector('.node-title-input');
-            if (input) {
-                input.readOnly = true;
-                if (newValue === null) {
+            if (newValue === null) {
+                const input = card.querySelector('.node-title-input');
+                if (input) {
                     newValue = input.value;
                 }
             }
@@ -554,12 +531,9 @@ export class MindMapCanvas {
                     const now = Date.now();
                     if (now - lastTapTime < 300) {
                         e.preventDefault();
-                        const input = card.querySelector('.node-title-input');
-                        if (input) {
-                            this.startInlineEdit(node.id, input);
-                            lastTapTime = 0; // Reset
-                            return;
-                        }
+                        this.startInlineEdit(node.id);
+                        lastTapTime = 0; // Reset
+                        return;
                     }
                     lastTapTime = now;
 
@@ -582,10 +556,7 @@ export class MindMapCanvas {
                 // Double click inline edit (mouse fallback)
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
-                    const input = card.querySelector('.node-title-input');
-                    if (input) {
-                        this.startInlineEdit(node.id, input);
-                    }
+                    this.startInlineEdit(node.id);
                 });
                 
                 this.nodesLayer.appendChild(card);
@@ -604,23 +575,69 @@ export class MindMapCanvas {
             card.style.setProperty('--node-accent-glow', `${colorMeta.border}2d`); // 18% glow opacity
             
             // Inside contents
+            const isEditing = this.editingNodeID === node.id;
             let input = card.querySelector('.node-title-input');
+            let titleDisplay = card.querySelector('.node-title-display');
             let notesText = card.querySelector('.node-card-notes');
             
-            if (!input) {
-                card.innerHTML = `
-                    <div class="node-card-header">
-                        <div class="node-card-bullet"></div>
-                        <input type="text" class="node-title-input" readonly value="${node.title}">
-                    </div>
-                    <div class="node-card-notes ${!node.notes ? 'empty-placeholder' : ''}">
-                        ${node.notes ? node.notes : (isSelected ? 'Double click to edit title' : '')}
-                    </div>
-                `;
+            const needsFullRebuild = (!isEditing && !titleDisplay) || (isEditing && !input);
+            
+            if (needsFullRebuild) {
+                if (isEditing) {
+                    card.innerHTML = `
+                        <div class="node-card-header">
+                            <div class="node-card-bullet"></div>
+                            <input type="text" class="node-title-input" value="${node.title}">
+                        </div>
+                        <div class="node-card-notes ${!node.notes ? 'empty-placeholder' : ''}">
+                            ${node.notes ? node.notes : (isSelected ? 'Double click or edit in inspector' : '')}
+                        </div>
+                    `;
+                    
+                    const newInput = card.querySelector('.node-title-input');
+                    if (newInput) {
+                        newInput.focus();
+                        setTimeout(() => {
+                            newInput.select();
+                        }, 50);
+                        
+                        const keyHandler = (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                newInput.blur();
+                            }
+                        };
+                        
+                        const blurHandler = () => {
+                            newInput.removeEventListener('keydown', keyHandler);
+                            newInput.removeEventListener('blur', blurHandler);
+                            this.commitInlineEdit(node.id, newInput.value);
+                        };
+                        
+                        newInput.addEventListener('keydown', keyHandler);
+                        newInput.addEventListener('blur', blurHandler);
+                    }
+                } else {
+                    card.innerHTML = `
+                        <div class="node-card-header">
+                            <div class="node-card-bullet"></div>
+                            <span class="node-title-display">${node.title || 'Idea'}</span>
+                        </div>
+                        <div class="node-card-notes ${!node.notes ? 'empty-placeholder' : ''}">
+                            ${node.notes ? node.notes : (isSelected ? 'Double click or edit in inspector' : '')}
+                        </div>
+                    `;
+                }
             } else {
-                // Update title value if not currently typing in it
-                if (document.activeElement !== input && this.editingNodeID !== node.id) {
-                    input.value = node.title;
+                // Quietly sync values to preserve focus
+                if (isEditing) {
+                    if (document.activeElement !== input) {
+                        input.value = node.title;
+                    }
+                } else {
+                    if (titleDisplay && titleDisplay.textContent !== node.title) {
+                        titleDisplay.textContent = node.title || 'Idea';
+                    }
                 }
                 
                 // Update notes body
