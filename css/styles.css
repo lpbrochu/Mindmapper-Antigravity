@@ -654,9 +654,9 @@ textarea.inspector-input {
     font-family: var(--font-heading);
     font-weight: 600;
     font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
     flex: 1;
     min-width: 0;
     pointer-events: none;
